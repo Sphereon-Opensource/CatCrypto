@@ -107,7 +107,7 @@ public class CatArgon2Context {
             }
         }
     }
-    
+
     /// Desired hash result type.
     public var hashResultType: CatArgon2HashResultType = .hashEncoded
 
@@ -156,7 +156,7 @@ public class CatArgon2Crypto: Contextual, Hashing, Verification {
     ///
     /// - Returns: The encoded hash length in bytes.
     func argon2EncodedLength() -> Int {
-        let saltLength = stringToBytes(context.salt).count
+        let saltLength = stringToBytes(context.salt)!.count
         return argon2_encodedlen(UInt32(context.iterations),
                                  UInt32(context.memory),
                                  UInt32(context.parallelism),
@@ -173,7 +173,7 @@ public class CatArgon2Crypto: Contextual, Hashing, Verification {
         let passwordCString = password.cString(using: .utf8)
         let passwordLength = password.lengthOfBytes(using: .utf8)
         let saltBytes = stringToBytes(context.salt)
-        let saltLength = stringToBytes(context.salt).count
+        let saltLength = saltBytes!.count
         let encodedLength = argon2EncodedLength()
         var result: [Int8] = Array(repeating: 0, count: encodedLength)
         var errorCode: CInt
@@ -190,7 +190,7 @@ public class CatArgon2Crypto: Contextual, Hashing, Verification {
         }
         return (errorCode, result.map { UInt8($0) })
     }
-    
+
     /// Hash raw with Argon2 function.
     ///
     /// - Parameter password: Password string.
@@ -199,7 +199,7 @@ public class CatArgon2Crypto: Contextual, Hashing, Verification {
         let passwordCString = password.cString(using: .utf8)
         let passwordLength = password.lengthOfBytes(using: .utf8)
         let saltBytes = stringToBytes(context.salt)
-        let saltLength = stringToBytes(context.salt).count
+        let saltLength = saltBytes!.count
         let hashLength = context.hashLength
         var hashResult = [UInt8](repeating: 0, count: hashLength)
         var errorCode: CInt
@@ -249,7 +249,7 @@ public class CatArgon2Crypto: Contextual, Hashing, Verification {
                                                          errorDescription: String(cString: argon2_error_message(result.errorCode))))
         }
     }
-    
+
     // MARK: - Verification
     public func verify(hash: String, password: String) -> CatCryptoResult {
         let errorCode = argon2Verify(hash: hash, password: password)
