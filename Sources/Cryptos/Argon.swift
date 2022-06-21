@@ -42,7 +42,7 @@ public enum CatArgon2Mode: Int {
 public enum CatArgon2HashResultType {
     /// Returns raw hash
     case hashRaw
-    
+
     /// Returns encoded hash
     case hashEncoded
 }
@@ -131,12 +131,32 @@ public class CatArgon2Crypto: Contextual, Hashing, Verification {
         self.context = context
     }
 
+    func stringToBytes(_ string: String) -> [UInt8]? {
+        let length = string.characters.count
+        if length & 1 != 0 {
+            return nil
+        }
+        var bytes = [UInt8]()
+        bytes.reserveCapacity(length/2)
+        var index = string.startIndex
+        for _ in 0..<length/2 {
+            let nextIndex = string.index(index, offsetBy: 2)
+            if let b = UInt8(string[index..<nextIndex], radix: 16) {
+                bytes.append(b)
+            } else {
+                return nil
+            }
+            index = nextIndex
+        }
+        return bytes
+    }
+
     // MARK: - Core
     /// Returns the encoded hash length.
     ///
     /// - Returns: The encoded hash length in bytes.
     func argon2EncodedLength() -> Int {
-        let saltLength = context.salt.lengthOfBytes(using: .utf8)
+        let saltLength = stringToBytes(context.salt).count
         return argon2_encodedlen(UInt32(context.iterations),
                                  UInt32(context.memory),
                                  UInt32(context.parallelism),
@@ -152,21 +172,21 @@ public class CatArgon2Crypto: Contextual, Hashing, Verification {
     func argon2HashEncoded(password: String) -> (errorCode: Int32, output: [UInt8]) {
         let passwordCString = password.cString(using: .utf8)
         let passwordLength = password.lengthOfBytes(using: .utf8)
-        let saltCString = context.salt.cString(using: .utf8)
-        let saltLength = context.salt.lengthOfBytes(using: .utf8)
+        let saltBytes = stringToBytes(context.salt)
+        let saltLength = stringToBytes(context.salt).count
         let encodedLength = argon2EncodedLength()
         var result: [Int8] = Array(repeating: 0, count: encodedLength)
         var errorCode: CInt
         switch context.mode {
         case .argon2d:
             errorCode = argon2d_hash_encoded(UInt32(context.iterations), UInt32(context.memory), UInt32(context.parallelism), passwordCString,
-                                             passwordLength, saltCString, saltLength, context.hashLength, &result, encodedLength)
+                                             passwordLength, saltBytes, saltLength, context.hashLength, &result, encodedLength)
         case .argon2i:
             errorCode = argon2i_hash_encoded(UInt32(context.iterations), UInt32(context.memory), UInt32(context.parallelism), passwordCString,
-                                             passwordLength, saltCString, saltLength, context.hashLength, &result, encodedLength)
+                                             passwordLength, saltBytes, saltLength, context.hashLength, &result, encodedLength)
         case .argon2id:
             errorCode = argon2id_hash_encoded(UInt32(context.iterations), UInt32(context.memory), UInt32(context.parallelism), passwordCString,
-                                              passwordLength, saltCString, saltLength, context.hashLength, &result, encodedLength)
+                                              passwordLength, saltBytes, saltLength, context.hashLength, &result, encodedLength)
         }
         return (errorCode, result.map { UInt8($0) })
     }
@@ -178,21 +198,21 @@ public class CatArgon2Crypto: Contextual, Hashing, Verification {
     func argon2HashRaw(password: String) -> (errorCode: Int32, output: [UInt8]) {
         let passwordCString = password.cString(using: .utf8)
         let passwordLength = password.lengthOfBytes(using: .utf8)
-        let saltCString = context.salt.cString(using: .utf8)
-        let saltLength = context.salt.lengthOfBytes(using: .utf8)
+        let saltBytes = stringToBytes(context.salt)
+        let saltLength = stringToBytes(context.salt).count
         let hashLength = context.hashLength
         var hashResult = [UInt8](repeating: 0, count: hashLength)
         var errorCode: CInt
         switch context.mode {
         case .argon2d:
             errorCode = argon2d_hash_raw(UInt32(context.iterations), UInt32(context.memory), UInt32(context.parallelism), passwordCString,
-                passwordLength, saltCString, saltLength, &hashResult, hashLength)
+                passwordLength, saltBytes, saltLength, &hashResult, hashLength)
         case .argon2i:
             errorCode = argon2i_hash_raw(UInt32(context.iterations), UInt32(context.memory), UInt32(context.parallelism), passwordCString,
-                                         passwordLength, saltCString, saltLength, &hashResult, hashLength)
+                                         passwordLength, saltBytes, saltLength, &hashResult, hashLength)
         case .argon2id:
             errorCode = argon2id_hash_raw(UInt32(context.iterations), UInt32(context.memory), UInt32(context.parallelism), passwordCString,
-                                          passwordLength, saltCString, saltLength, &hashResult, hashLength)
+                                          passwordLength, saltBytes, saltLength, &hashResult, hashLength)
         }
         return (errorCode, hashResult.map { UInt8($0) })
     }
